@@ -1,7 +1,4 @@
-# vsd-riscv
 
-
----
 
 # Getting Started with RISC-V on GitHub Codespaces
 
