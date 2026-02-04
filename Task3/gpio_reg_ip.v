@@ -8,7 +8,7 @@ module GPIO_register_ip (
 
 reg [31:0] data;
 reg [31:0] dir;
-reg [31:0] gpio_in;
+reg [31:0] gpio_in = 32'h0;
 reg [31:0] gpio_out;
 
 initial
@@ -34,7 +34,7 @@ always @ (posedge clk) begin
                 default: ; // Default read value
             endcase
         end
-    assign gpio_out <= data;
+     gpio_out <= data & dir;
     end
 end
 endmodule
