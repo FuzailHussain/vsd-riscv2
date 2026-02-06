@@ -1,4 +1,4 @@
-# Task 2 Submission
+# Task 3 Submission
 
 ## GTK Waveform for GPIO multi register
 
