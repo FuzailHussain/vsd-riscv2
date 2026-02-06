@@ -1,4 +1,4 @@
-module IC2_master_standard (
+module I2C_master_standard (
     input clk,
     input rst_n,
     input wr,
