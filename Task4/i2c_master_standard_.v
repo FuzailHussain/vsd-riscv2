@@ -17,7 +17,7 @@ module I2C_master_standard (
     reg [6:0]  slave_addr;
     reg [7:0]  data_to_send;
     reg [7:0]  data_received;
-    reg [2:0]  status;
+    reg [1:0]  status;
     reg        mode;          // 0 = TX, 1 = RX
 
     reg [7:0]  clk_count;
@@ -36,7 +36,7 @@ module I2C_master_standard (
             clk_div      <= 8'd1;
             slave_addr   <= 7'd0;
             data_to_send <= 8'd0;
-            status       <= 3'd0;
+            status       <= 2'd0;
             mode         <= 1'b0;
             data_out     <= 32'd0;
         end else begin
@@ -46,7 +46,6 @@ module I2C_master_standard (
                     8'h04: clk_div      <= data_in[7:0];
                     8'h08: slave_addr   <= data_in[6:0];
                     8'h0C: data_to_send <= data_in[7:0];
-                    8'h14: status       <= data_in[2:0];
                     8'h18: mode         <= data_in[0];
                     default: ;
                 endcase
@@ -55,7 +54,6 @@ module I2C_master_standard (
                     8'h00: data_out <= start_enable;
                     8'h04: data_out <= clk_div;
                     8'h08: data_out <= {25'd0, slave_addr};
-                    8'h0C: data_out <= {24'd0, data_to_send};
                     8'h10: data_out <= {24'd0, data_received};
                     8'h14: data_out <= status;
                     8'h18: data_out <= {31'd0, mode};
@@ -85,7 +83,7 @@ module I2C_master_standard (
     end
 
     // ---------------------------------
-    // I2C transmit / receive
+    // I2C transmit / receive (simplified)
     // ---------------------------------
     always @(posedge scl or negedge rst_n) begin
         if (!rst_n) begin
@@ -107,13 +105,18 @@ module I2C_master_standard (
             else if (bit_index == 8) begin
                 sda_drive_low <= 1'b0; // release SDA
                 bit_index <= bit_index + 1;
+            end else if (bit_index == 9) begin
+                if (sda == 1'b0) begin
+                    status[1:0] <= 2'b10;
+                    bit_index <= bit_index + 1;
+                end else status[1:0] <= 2'b11;
             end
 
             // Data phase
-            else if (bit_index < 17 && mode == 1'b0) begin
-                sda_drive_low <= ~data_to_send[15 - bit_index];
+            else if (bit_index < 18 && mode == 1'b0) begin
+                sda_drive_low <= ~data_to_send[17 - bit_index];
                 bit_index <= bit_index + 1;
-            end else if (bit_index < 17 && mode == 1'b1) begin
+            end else if (bit_index < 18 && mode == 1'b1) begin
                 data_received[15 - bit_index] <= sda;
                 bit_index <= bit_index + 1;
             end
