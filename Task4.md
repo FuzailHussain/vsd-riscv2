@@ -10,4 +10,4 @@
 
 ## Verilog files
 
-[Task 4 folder] (./Task4)
+[Task 4 folder](./Task4)
