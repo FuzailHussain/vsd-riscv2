@@ -8,6 +8,6 @@
 
  ![alt text](<Screenshot 2026-02-11 at 12.24.37 AM.png>)
 
-## Verilog files
+## Verilog, TB and vcd files
 
 [Task 4 folder](./Task4)
