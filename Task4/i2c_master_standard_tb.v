@@ -7,7 +7,8 @@ module tb_I2C_master_standard;
     // ----------------------------------
     reg         clk;
     reg         rst_n;
-    reg         wr;
+    reg         wr_en;
+    reg         r_en;
     reg [7:0]   addr_offset;
     reg [31:0]  data_in;
     wire [31:0] data_out;
@@ -26,7 +27,8 @@ module tb_I2C_master_standard;
     I2C_master_standard dut (
         .clk(clk),
         .rst_n(rst_n),
-        .wr(wr),
+        .wr_en(wr_en),
+        .r_en(r_en),
         .addr_offset(addr_offset),
         .data_in(data_in),
         .data_out(data_out),
@@ -46,7 +48,8 @@ module tb_I2C_master_standard;
     task reg_write(input [7:0] addr, input [31:0] data);
         begin
             @(posedge clk);
-            wr          <= 1'b1;
+            wr_en     <= 1'b1;
+            r_en      <= 1'b0;
             addr_offset<= addr;
             data_in    <= data;
             // @(posedge clk);
@@ -62,7 +65,8 @@ module tb_I2C_master_standard;
     task reg_read(input [7:0] addr);
         begin
             @(posedge clk);
-            wr          <= 1'b0;
+            wr_en     <= 1'b0;
+            r_en      <= 1'b1;
             addr_offset<= addr;
             @(posedge clk);
             $display("[%0t] READ  addr 0x%02h -> 0x%08h",
@@ -74,7 +78,7 @@ module tb_I2C_master_standard;
     // Very simple I2C slave ACK model
     // ----------------------------------
     // Pull SDA low during ACK bit (bit_index == 8)
-    always @(negedge scl) begin
+    always @(posedge scl) begin
         if (dut.bit_index == 8)
             sda_slave_drive <= 1'b1; // ACK
         else
@@ -88,9 +92,12 @@ module tb_I2C_master_standard;
         $display("====================================");
         $display("   I2C MASTER STANDARD TB START");
         $display("====================================");
+        $dumpfile("i2c_master_standard.vcd");
+        $dumpvars(0, tb_I2C_master_standard);
 
         // Init
-        wr = 0;
+        wr_en = 0;
+        r_en = 0;
         addr_offset = 0;
         data_in = 0;
         sda_slave_drive = 0;
@@ -103,23 +110,28 @@ module tb_I2C_master_standard;
         // -----------------------------
         // Program registers
         // -----------------------------
-        reg_write(8'h04, 32'd30);   // clk_div
+        wr_en = 1;
+        reg_write(8'h04, 32'd2);   // clk_div
         reg_write(8'h08, 32'h55);   // slave address
         reg_write(8'h0C, 32'hA6);   // data to send
         reg_write(8'h18, 32'd0);    // mode = transmit
         reg_write(8'h00, 32'd1);    // start_enable
 
+        #40;
+        wr_en = 0; // Stop writing registers
         // Let I2C activity run
         #3000;
 
         // -----------------------------
         // Readback registers
         // -----------------------------
+        r_en = 1;
         reg_read(8'h00);
         reg_read(8'h04);
         reg_read(8'h08);
         reg_read(8'h0C);
         reg_read(8'h10);
+        reg_read(8'h14);
         reg_read(8'h18);
 
         #500;

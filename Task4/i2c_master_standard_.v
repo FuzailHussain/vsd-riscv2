@@ -1,7 +1,8 @@
 module I2C_master_standard (
     input         clk,
     input         rst_n,
-    input         wr,
+    input         wr_en,
+    input         r_en,
     input  [7:0]  addr_offset,
     input  [31:0] data_in,
     output reg [31:0] data_out,
@@ -36,11 +37,12 @@ module I2C_master_standard (
             clk_div      <= 8'd1;
             slave_addr   <= 7'd0;
             data_to_send <= 8'd0;
+            data_received <= 8'd0;
             status       <= 2'd0;
             mode         <= 1'b0;
             data_out     <= 32'd0;
         end else begin
-            if (wr) begin
+            if (wr_en) begin
                 case (addr_offset)
                     8'h00: start_enable <= |data_in;
                     8'h04: clk_div      <= data_in[7:0];
@@ -49,18 +51,25 @@ module I2C_master_standard (
                     8'h18: mode         <= data_in[0];
                     default: ;
                 endcase
-            end else begin
-                case (addr_offset)
-                    8'h00: data_out <= start_enable;
-                    8'h04: data_out <= clk_div;
-                    8'h08: data_out <= {25'd0, slave_addr};
-                    8'h10: data_out <= {24'd0, data_received};
-                    8'h14: data_out <= status;
-                    8'h18: data_out <= {31'd0, mode};
-                    default: data_out <= 32'd0;
-                endcase
             end
         end
+    end
+
+    always @(*) begin
+        if (r_en) begin
+            case (addr_offset)
+                8'h00: data_out = start_enable;
+                8'h04: data_out = clk_div;
+                8'h08: data_out = {25'd0, slave_addr};
+                8'h10: data_out = {24'd0, data_received};
+                8'h14: data_out = status;
+                8'h18: data_out = {31'd0, mode};
+                default: data_out = 32'd0;
+            endcase
+        end else begin
+            data_out = 32'd0;
+        end
+        
     end
 
     // ---------------------------------
@@ -92,6 +101,9 @@ module I2C_master_standard (
             data_received <= 8'd0;
         end else if (start_enable) begin
 
+            if (bit_index == 0) begin
+                status <= 2'b01; // BUSY
+            end
             // Address + R/W bit
             if (bit_index < 7) begin
                 sda_drive_low <= ~slave_addr[6 - bit_index];
@@ -125,7 +137,8 @@ module I2C_master_standard (
             else begin
                 sda_drive_low <= 1'b0;
                 bit_index <= 5'd0;
-                status <= 3'b001; // done
+                status <= 2'b00; // done
+                start_enable <= 1'b0; // auto-clear start
             end
         end
     end
